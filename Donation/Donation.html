@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>寄付品の登録</title>
+    <style>
+        :root {
+            --primary-color: #007bff; /* テーマカラーを青に */
+            --danger-color: #dc3545;
+            --light-gray: #f8f9fa;
+            --gray: #6c757d;
+            --border-color: #dee2e6;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            background-color: var(--light-gray);
+            color: #333;
+        }
+        .header {
+            background: #fff;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .header img { max-width: 180px; margin-bottom: 10px; }
+        .header h1 { margin: 0; font-size: 22px; color: var(--primary-color); font-weight: 600; }
+        .container { padding: 20px; }
+        .card {
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .form-group { margin-bottom: 20px; }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--gray);
+            font-size: 14px;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .input-group { display: flex; align-items: center; gap: 10px; }
+        .image-preview {
+            width: 100%;
+            height: 150px;
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #aaa;
+            background-size: cover;
+            background-position: center;
+        }
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .btn {
+            flex-grow: 1;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-secondary { background-color: #e9ecef; color: #333; }
+        .btn:disabled { background-color: #cccccc; cursor: not-allowed; }
+        .remove-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background-color: var(--danger-color);
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .item-card { position: relative; }
+        #message { text-align: center; margin-top: 20px; font-weight: bold; }
+    </style>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+
+  <div class="header">
+    <img src="http://whywaste-japan.sakura.ne.jp/whywaste-japan.jp/product_image/Donation/rogo.png" alt="Logo">
+    <h1>寄付品の登録</h1>
+  </div>
+
+  <div class="container">
+    <form id="main-form" novalidate>
+      <div class="card">
+        <div class="form-group">
+          <label for="response-deadline">返答期限</label>
+          <input type="datetime-local" id="response-deadline" required>
+        </div>
+        <div class="form-group">
+          <label for="handover-deadline">引き渡し期限</label>
+          <input type="datetime-local" id="handover-deadline" required>
+        </div>
+      </div>
+      
+      <div id="items-container">
+        </div>
+
+      <div class="controls">
+          <button type="button" id="add-item-btn" class="btn btn-secondary">＋ 商品を追加する</button>
+          <button type="button" id="submit-button" class="btn btn-primary" disabled>LIFF初期化中...</button>
+      </div>
+    </form>
+    <div id="message"></div>
+  </div>
+
+  <script>
+    let userSub = '';
+    const itemsContainer = document.getElementById('items-container');
+
+    // ★★★★★ 1. あなたのLIFF IDとGASのURLを設定してください ★★★★★
+    const liffId = "2008200399-AVbwz9Dw";
+    const gasWebAppUrl = 'https://script.google.com/macros/s/AKfycbz8uu0AoILoiImRt0QYyy0cyn92HXMwH8CqpzEelRSYWUg9rSHhc2Fptf53FAci0hli/exec';
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+
+    function createItemEntry() {
+        const itemIndex = itemsContainer.children.length;
+        const card = document.createElement('div');
+        card.className = 'card item-card';
+        card.innerHTML = `
+            <div class="form-group">
+                <label>商品カテゴリ</label>
+                <select name="category" required>
+                    <option value="">選択してください</option>
+                    <option value="野菜">野菜</option>
+                    <option value="加工食品">加工食品</option>
+                    <option value="冷凍食品">冷凍食品</option>
+                    <option value="日配品">日配品</option>
+                    <option value="生活雑貨">生活雑貨</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>商品名</label>
+                <input type="text" name="name" required>
+            </div>
+            <div class="form-group">
+                <label>有効期限 (任意)</label>
+                <input type="date" name="expiry-date">
+            </div>
+            <div class="form-group">
+                <label>個数 (任意)</label>
+                <div class="input-group">
+                    <input type="number" name="quantity" placeholder="例: 10">
+                    <select name="unit" style="width: 100px;">
+                        <option value="個" selected>個</option> <option value="本">本</option> <option value="袋">袋</option>
+                        <option value="パック">パック</option> <option value="箱">箱</option> <option value="缶">缶</option>
+                        <option value="瓶">瓶</option> <option value="束">束</option> <option value="巻">巻</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>重量 (kg) (任意)</label>
+                <input type="number" name="weight" step="0.1" min="0" placeholder="例: 0.5">
+            </div>
+            <div class="form-group">
+                <label>画像 (任意)</label>
+                <input type="file" name="photo" accept="image/*">
+                <div class="image-preview">プレビュー</div>
+            </div>
+            <button type="button" class="remove-btn" style="display: none;">×</button>
+        `;
+        itemsContainer.appendChild(card);
+        setupImagePreview(card.querySelector('[name="photo"]'));
+        updateRemoveButtons();
+    }
+
+    function updateRemoveButtons() {
+        const items = itemsContainer.querySelectorAll('.item-card');
+        items.forEach(item => {
+            const removeBtn = item.querySelector('.remove-btn');
+            removeBtn.style.display = (items.length > 1) ? 'block' : 'none';
+        });
+    }
+
+    function setupImagePreview(fileInput) {
+        const preview = fileInput.nextElementSibling;
+        fileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    preview.style.backgroundImage = `url('${e.target.result}')`;
+                    preview.textContent = '';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.backgroundImage = 'none';
+                preview.textContent = 'プレビュー';
+            }
+        });
+    }
+
+    async function initializePage() {
+        try {
+            await liff.init({ liffId: liffId });
+            if (!liff.isLoggedIn()) { liff.login(); return; }
+            const idToken = liff.getDecodedIDToken();
+            if (!idToken || !idToken.sub) throw new Error("ユーザーIDが取得できませんでした。");
+            userSub = idToken.sub;
+            document.getElementById('submit-button').disabled = false;
+            document.getElementById('submit-button').textContent = '全てまとめて送信する';
+        } catch (error) {
+            alert('LIFFの初期化に失敗しました: ' + error.message);
+            document.getElementById('submit-button').textContent = 'エラーが発生しました';
+        }
+    }
+
+    document.getElementById('add-item-btn').addEventListener('click', () => {
+        const lastItem = itemsContainer.lastElementChild;
+        let isValid = true;
+        if (lastItem) {
+            lastItem.querySelectorAll('[required]').forEach(input => {
+                if (!input.value) isValid = false;
+            });
+        }
+        if (isValid) {
+            createItemEntry();
+        } else {
+            alert('現在の商品の必須項目をすべて入力してから、新しい商品を追加してください。');
+        }
+    });
+
+    itemsContainer.addEventListener('click', e => {
+        if (e.target.classList.contains('remove-btn')) {
+            e.target.closest('.item-card').remove();
+            updateRemoveButtons();
+        }
+    });
+
+    document.getElementById('submit-button').addEventListener('click', function() {
+        if (!document.getElementById('main-form').checkValidity()) {
+            alert('未入力の必須項目があります。内容をご確認ください。');
+            return;
+        }
+        this.disabled = true; this.textContent = '処理中...';
+
+        const promises = [];
+        document.querySelectorAll('.item-card').forEach(card => {
+            promises.push(new Promise((resolve, reject) => {
+                const file = card.querySelector('[name="photo"]').files[0];
+                const itemData = {
+                    category: card.querySelector('[name="category"]').value,
+                    name: card.querySelector('[name="name"]').value,
+                    expiryDate: card.querySelector('[name="expiry-date"]').value,
+                    quantity: card.querySelector('[name="quantity"]').value,
+                    unit: card.querySelector('[name="unit"]').value,
+                    weight: card.querySelector('[name="weight"]').value,
+                    responseDeadline: document.getElementById('response-deadline').value,
+                    handoverDeadline: document.getElementById('handover-deadline').value
+                };
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = e => {
+                        itemData.fileData = e.target.result;
+                        itemData.fileName = file.name;
+                        resolve(itemData);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                } else { resolve(itemData); }
+            }));
+        });
+        
+        Promise.all(promises).then(dataArray => {
+            fetch(gasWebAppUrl, {
+                method: 'POST',
+                body: JSON.stringify({ dataArray, userSub }),
+                headers: { 'Content-Type': 'application/json' },
+                mode: 'no-cors'
+            })
+            .then(() => alert('成功: 商品データをサーバーに送信しました。'))
+            .catch(err => alert('送信エラー: ' + err.message))
+            .finally(() => { this.disabled = false; this.textContent = '全てまとめて送信する'; });
+        }).catch(err => alert('データ作成エラー: ' + err.message));
+    });
+
+    // 初期化処理
+    window.onload = () => {
+        initializePage();
+        createItemEntry();
+    };
+  </script>
+</body>
+</html>

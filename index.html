@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>情報登録</title>
+    <style>
+        :root {
+            --primary-color: #28a745;
+            --light-gray: #f8f9fa;
+            --gray: #6c757d;
+            --border-color: #dee2e6;
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; background-color: var(--light-gray); color: #333; }
+        .header { background: #fff; padding: 20px; text-align: center; border-bottom: 1px solid var(--border-color); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .header img { max-width: 180px; margin-bottom: 10px; }
+        .header h1 { margin: 0; font-size: 22px; color: var(--primary-color); font-weight: 600; transition: color 0.3s; }
+        .container { padding: 20px; }
+        .card { background-color: #ffffff; border-radius: 12px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .form-group { margin-bottom: 25px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--gray); font-size: 14px; }
+        input, select { width: 100%; padding: 12px; box-sizing: border-box; border: 1px solid var(--border-color); border-radius: 8px; font-size: 16px; transition: border-color 0.2s, box-shadow 0.2s; }
+        input:focus, select:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2); }
+        .input-group { display: flex; align-items: center; gap: 10px; }
+        .input-group span { font-size: 16px; color: var(--gray); }
+        .partner-list { max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; }
+        .partner-item { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #f0f0f0; }
+        .partner-item:last-child { border-bottom: none; }
+        .partner-item input[type="checkbox"] { width: 20px; height: 20px; margin-right: 15px; }
+        button { display: block; width: 100%; padding: 15px; border-radius: 8px; font-size: 18px; font-weight: 600; text-align: center; cursor: pointer; border: none; background-color: var(--primary-color); color: white; transition: background-color 0.2s; }
+        button:disabled { background-color: #cccccc; cursor: not-allowed; }
+        #message { text-align: center; margin-top: 20px; font-weight: bold; }
+    </style>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+
+  <div class="header">
+    <img src="http://whywaste-japan.sakura.ne.jp/whywaste-japan.jp/product_image/Donation/rogo.png" alt="Logo">
+    <h1 id="main-title">情報登録</h1>
+  </div>
+
+  <div class="container">
+    <form id="infoForm">
+      <div class="card">
+        <div class="form-group"> <label for="name" id="name-label">名前</label> <input type="text" id="name" required> </div>
+        <div class="form-group"> <label for="zip1">郵便番号</label> <div class="input-group"> <input type="tel" id="zip1" size="3" maxlength="3" required> <span>-</span> <input type="tel" id="zip2" size="4" maxlength="4" required> </div> </div>
+        <div class="form-group"> <label for="prefecture">都道府県</label> <select id="prefecture" required> <option value="">選択してください</option> </select> </div>
+        <div class="form-group"> <label for="address">住所（市区町村以下）</label> <input type="text" id="address" required> </div>
+        <div class="form-group"> <label for="tel1">電話番号</label> <div class="input-group"> <input type="tel" id="tel1" size="4"> <span>-</span> <input type="tel" id="tel2" size="4"> <span>-</span> <input type="tel" id="tel3" size="4"> </div> </div>
+      </div>
+      <div class="card" id="partner-selection-card">
+        <div class="form-group"> <label id="partner-label">パートナーを選択</label> <div id="partner-list-container" class="partner-list"> <p>リストを読み込んでいます...</p> </div> </div>
+      </div>
+      <button type="submit" id="submitButton" disabled>登録する</button>
+    </form>
+    <div id="message"></div>
+  </div>
+
+  <script>
+    let globalUserId = '';
+    const submitButton = document.getElementById('submitButton');
+    const liffId_provider = "2008200399-07Rnrwjn";
+    const liffId_charity = "2008200399-RGkQZqJQ";
+    const gasUrl = 'https://script.google.com/macros/s/AKfycbzk7pMtK2rc-jAj-_ACtRwMJrRTfeUuoryR7cs9HrB3sZeyGj_9O81aT06bWHdJnagvBw/exec';
+    const prefectures = ["北海道","青森県","岩手県","宮城県","秋田県","山形県","福島県","茨城県","栃木県","群馬県","埼玉県","千葉県","東京都","神奈川県","新潟県","富山県","石川県","福井県","山梨県","長野県","岐阜県","静岡県","愛知県","三重県","滋賀県","京都府","大阪府","兵庫県","奈良県","和歌山県","鳥取県","島根県","岡山県","広島県","山口県","徳島県","香川県","愛媛県","高知県","福岡県","佐賀県","長崎県","熊本県","大分県","宮崎県","鹿児島県","沖縄県"];
+
+    function fetchAddress() {
+      const zip1 = document.getElementById('zip1').value;
+      const zip2 = document.getElementById('zip2').value;
+      if (zip1.length === 3 && zip2.length === 4) {
+        fetch(`https://zipcloud.ibsnet.co.jp/api/search?zipcode=${zip1}${zip2}`)
+          .then(res => res.json()).then(data => {
+            if (data.results) {
+              const res = data.results[0];
+              document.getElementById('prefecture').value = res.address1;
+              document.getElementById('address').value = res.address2 + res.address3;
+            }
+          });
+      }
+    }
+    document.getElementById('zip2').addEventListener('keyup', fetchAddress);
+
+    async function main() {
+      const prefSelect = document.getElementById('prefecture');
+      prefectures.forEach(pref => {
+        const option = document.createElement('option');
+        option.value = pref; option.textContent = pref;
+        prefSelect.appendChild(option);
+      });
+      
+      const urlParams = new URLSearchParams(window.location.search);
+      const role = urlParams.get('role');
+      const liffId = (role === 'provider') ? liffId_provider : liffId_charity;
+
+      if (role === 'provider') {
+        document.title = '小売店情報登録';
+        document.getElementById('main-title').innerText = '小売店情報登録';
+        document.getElementById('name-label').innerText = '小売店名';
+        document.getElementById('partner-label').innerText = '寄付の案内を送る慈善団体を選択';
+      } else {
+        document.title = '慈善団体情報登録';
+        document.getElementById('main-title').innerText = '慈善団体情報登録';
+        document.getElementById('name-label').innerText = '団体名';
+        document.querySelector(':root').style.setProperty('--primary-color', '#007bff');
+        document.getElementById('partner-selection-card').style.display = 'none';
+      }
+
+      try {
+        await liff.init({ liffId: liffId });
+        if (!liff.isLoggedIn()) { liff.login(); return; }
+        const idToken = liff.getDecodedIDToken();
+        if (!idToken || !idToken.sub) { throw new Error("IDトークンが取得できませんでした。"); }
+        globalUserId = idToken.sub;
+        
+        const action = (role === 'provider') ? 'getProviderFormData' : 'getCharityFormData';
+        const response = await fetch(`${gasUrl}?action=${action}&sub=${globalUserId}`);
+        const data = await response.json();
+        const userData = data.userData;
+        
+        if (role === 'provider') {
+          const partnerList = data.allCharities;
+          const container = document.getElementById('partner-list-container');
+          if (partnerList && partnerList.length > 0) {
+            let html = '';
+            partnerList.forEach(partner => {
+              html += `<div class="partner-item"><input type="checkbox" id="${partner.botUserId}" name="partners" value="${partner.botUserId}"><label for="${partner.botUserId}">${partner.organizationName}</label></div>`;
+            });
+            container.innerHTML = html;
+          } else {
+             container.innerHTML = `<p>登録されているパートナーがいません。</p>`;
+          }
+        }
+        
+        if (userData && userData.isRegistered) {
+          document.getElementById('name').value = userData.companyName || userData.organizationName || '';
+          document.getElementById('zip1').value = userData.zip1 || '';
+          document.getElementById('zip2').value = userData.zip2 || '';
+          document.getElementById('prefecture').value = userData.prefecture || '';
+          document.getElementById('address').value = userData.address || '';
+          document.getElementById('tel1').value = userData.tel1 || '';
+          document.getElementById('tel2').value = userData.tel2 || '';
+          document.getElementById('tel3').value = userData.tel3 || '';
+          
+          if (role === 'provider') {
+            const selectedPartners = userData.selectedCharities;
+            if (selectedPartners && selectedPartners.length > 0) {
+              selectedPartners.forEach(partnerId => {
+                const checkbox = document.getElementById(partnerId);
+                if (checkbox) checkbox.checked = true;
+              });
+            }
+          }
+        }
+        submitButton.disabled = false;
+      } catch (error) {
+        document.getElementById('message').innerText = `エラー: ${error.message}`;
+      }
+    }
+    window.onload = main;
+
+    document.getElementById('infoForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      submitButton.disabled = true;
+      
+      const role = new URLSearchParams(window.location.search).get('role');
+      const action = (role === 'provider') ? 'registerProvider' : 'registerCharity';
+      const completionMessage = (role === 'provider') ? '小売店アカウントとして登録しました。' : '慈善団体アカウントとして登録しました。';
+      
+      let formData = {
+        action: action,
+        globalUserId: globalUserId,
+        botUserId: liff.getContext()?.userId || null,
+        zip1: document.getElementById('zip1').value,
+        zip2: document.getElementById('zip2').value,
+        prefecture: document.getElementById('prefecture').value,
+        address: document.getElementById('address').value,
+        tel1: document.getElementById('tel1').value,
+        tel2: document.getElementById('tel2').value,
+        tel3: document.getElementById('tel3').value,
+      };
+
+      if (role === 'provider') {
+        const selectedPartners = [];
+        document.querySelectorAll('input[name="partners"]:checked').forEach(c => selectedPartners.push(c.value));
+        formData.companyName = document.getElementById('name').value;
+        formData.selectedCharities = selectedPartners;
+      } else {
+        formData.organizationName = document.getElementById('name').value;
+      }
+      
+      fetch(gasUrl, {
+        method: 'POST', body: JSON.stringify(formData), headers: { 'Content-Type': 'application/json' }, mode: 'no-cors'
+      }).then(() => {
+        document.getElementById('message').innerText = "登録が完了しました！メニューを更新します。";
+        liff.sendMessages([{ type: 'text', text: completionMessage }]).then(() => liff.closeWindow());
+      }).catch(error => {
+        document.getElementById('message').innerText = `送信エラー: ${error.message}`;
+        submitButton.disabled = false;
+      });
+    });
+  </script>
+</body>
+</html>

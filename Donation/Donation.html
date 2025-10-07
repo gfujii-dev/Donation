@@ -35,6 +35,7 @@
             margin-bottom: 20px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
+        .item-card { position: relative; }
         .form-group { margin-bottom: 20px; }
         label {
             display: block;
@@ -97,7 +98,6 @@
             cursor: pointer;
             font-size: 18px;
         }
-        .item-card { position: relative; }
         #message { text-align: center; margin-top: 20px; font-weight: bold; }
     </style>
     <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
@@ -136,14 +136,22 @@
   <script>
     let userSub = '';
     const itemsContainer = document.getElementById('items-container');
+    const submitButton = document.getElementById('submit-button');
 
     // ★★★★★ 1. あなたのLIFF IDとGASのURLを設定してください ★★★★★
     const liffId = "2008200399-AVbwz9Dw";
     const gasWebAppUrl = 'https://script.google.com/macros/s/AKfycbz8uu0AoILoiImRt0QYyy0cyn92HXMwH8CqpzEelRSYWUg9rSHhc2Fptf53FAci0hli/exec';
     // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
+    function setMinDateTime() {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      const minDateTime = now.toISOString().slice(0, 16);
+      document.getElementById('response-deadline').min = minDateTime;
+      document.getElementById('handover-deadline').min = minDateTime;
+    }
+
     function createItemEntry() {
-        const itemIndex = itemsContainer.children.length;
         const card = document.createElement('div');
         card.className = 'card item-card';
         card.innerHTML = `
@@ -158,34 +166,11 @@
                     <option value="生活雑貨">生活雑貨</option>
                 </select>
             </div>
-            <div class="form-group">
-                <label>商品名</label>
-                <input type="text" name="name" required>
-            </div>
-            <div class="form-group">
-                <label>有効期限 (任意)</label>
-                <input type="date" name="expiry-date">
-            </div>
-            <div class="form-group">
-                <label>個数 (任意)</label>
-                <div class="input-group">
-                    <input type="number" name="quantity" placeholder="例: 10">
-                    <select name="unit" style="width: 100px;">
-                        <option value="個" selected>個</option> <option value="本">本</option> <option value="袋">袋</option>
-                        <option value="パック">パック</option> <option value="箱">箱</option> <option value="缶">缶</option>
-                        <option value="瓶">瓶</option> <option value="束">束</option> <option value="巻">巻</option>
-                    </select>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>重量 (kg) (任意)</label>
-                <input type="number" name="weight" step="0.1" min="0" placeholder="例: 0.5">
-            </div>
-            <div class="form-group">
-                <label>画像 (任意)</label>
-                <input type="file" name="photo" accept="image/*">
-                <div class="image-preview">プレビュー</div>
-            </div>
+            <div class="form-group"> <label>商品名</label> <input type="text" name="name" required> </div>
+            <div class="form-group"> <label>有効期限 (任意)</label> <input type="date" name="expiry-date"> </div>
+            <div class="form-group"> <label>個数 (任意)</label> <div class="input-group"> <input type="number" name="quantity" placeholder="例: 10"> <select name="unit" style="width: 100px;"> <option value="個" selected>個</option> <option value="本">本</option> <option value="袋">袋</option> <option value="パック">パック</option> <option value="箱">箱</option> <option value="缶">缶</option> <option value="瓶">瓶</option> <option value="束">束</option> <option value="巻">巻</option> </select> </div> </div>
+            <div class="form-group"> <label>重量 (kg) (任意)</label> <input type="number" name="weight" step="0.1" min="0" placeholder="例: 0.5"> </div>
+            <div class="form-group"> <label>画像 (任意)</label> <input type="file" name="photo" accept="image/*"> <div class="image-preview">プレビュー</div> </div>
             <button type="button" class="remove-btn" style="display: none;">×</button>
         `;
         itemsContainer.appendChild(card);
@@ -212,9 +197,6 @@
                     preview.textContent = '';
                 };
                 reader.readAsDataURL(file);
-            } else {
-                preview.style.backgroundImage = 'none';
-                preview.textContent = 'プレビュー';
             }
         });
     }
@@ -226,11 +208,11 @@
             const idToken = liff.getDecodedIDToken();
             if (!idToken || !idToken.sub) throw new Error("ユーザーIDが取得できませんでした。");
             userSub = idToken.sub;
-            document.getElementById('submit-button').disabled = false;
-            document.getElementById('submit-button').textContent = '全てまとめて送信する';
+            submitButton.disabled = false;
+            submitButton.textContent = '全てまとめて送信する';
         } catch (error) {
             alert('LIFFの初期化に失敗しました: ' + error.message);
-            document.getElementById('submit-button').textContent = 'エラーが発生しました';
+            submitButton.textContent = 'エラーが発生しました';
         }
     }
 
@@ -242,11 +224,8 @@
                 if (!input.value) isValid = false;
             });
         }
-        if (isValid) {
-            createItemEntry();
-        } else {
-            alert('現在の商品の必須項目をすべて入力してから、新しい商品を追加してください。');
-        }
+        if (isValid) { createItemEntry(); } 
+        else { alert('現在の商品の必須項目をすべて入力してから、新しい商品を追加してください。'); }
     });
 
     itemsContainer.addEventListener('click', e => {
@@ -256,11 +235,18 @@
         }
     });
 
-    document.getElementById('submit-button').addEventListener('click', function() {
+    submitButton.addEventListener('click', function() {
         if (!document.getElementById('main-form').checkValidity()) {
             alert('未入力の必須項目があります。内容をご確認ください。');
             return;
         }
+        const responseDeadline = new Date(document.getElementById('response-deadline').value);
+        const handoverDeadline = new Date(document.getElementById('handover-deadline').value);
+        if (handoverDeadline < responseDeadline) {
+            alert('エラー: 引き渡し期限は、返答期限より後の日時に設定してください。');
+            return;
+        }
+
         this.disabled = true; this.textContent = '処理中...';
 
         const promises = [];
@@ -275,15 +261,12 @@
                     unit: card.querySelector('[name="unit"]').value,
                     weight: card.querySelector('[name="weight"]').value,
                     responseDeadline: document.getElementById('response-deadline').value,
-                    handoverDeadline: document.getElementById('handover-deadline').value
+                    handoverDeadline: document.getElementById('handover-deadline').value,
+                    fileData: null, fileName: null
                 };
                 if (file) {
                     const reader = new FileReader();
-                    reader.onload = e => {
-                        itemData.fileData = e.target.result;
-                        itemData.fileName = file.name;
-                        resolve(itemData);
-                    };
+                    reader.onload = e => { itemData.fileData = e.target.result; itemData.fileName = file.name; resolve(itemData); };
                     reader.onerror = reject;
                     reader.readAsDataURL(file);
                 } else { resolve(itemData); }
@@ -297,15 +280,20 @@
                 headers: { 'Content-Type': 'application/json' },
                 mode: 'no-cors'
             })
-            .then(() => alert('成功: 商品データをサーバーに送信しました。'))
-            .catch(err => alert('送信エラー: ' + err.message))
-            .finally(() => { this.disabled = false; this.textContent = '全てまとめて送信する'; });
+            .then(() => {
+                alert('成功: 商品データをサーバーに送信しました。');
+                liff.closeWindow();
+            })
+            .catch(err => {
+                alert('送信エラー: ' + err.message);
+                this.disabled = false; this.textContent = '全てまとめて送信する';
+            });
         }).catch(err => alert('データ作成エラー: ' + err.message));
     });
 
-    // 初期化処理
     window.onload = () => {
         initializePage();
+        setMinDateTime();
         createItemEntry();
     };
   </script>

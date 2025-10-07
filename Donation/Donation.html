@@ -6,7 +6,7 @@
     <title>寄付品の登録</title>
     <style>
         :root {
-            --primary-color: #007bff; /* テーマカラーを青に */
+            --primary-color: #007bff;
             --danger-color: #dc3545;
             --light-gray: #f8f9fa;
             --gray: #6c757d;
@@ -43,6 +43,17 @@
             font-weight: 600;
             color: var(--gray);
             font-size: 14px;
+        }
+        .required-badge {
+            display: inline-block;
+            margin-left: 8px;
+            padding: 2px 6px;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            background-color: var(--danger-color);
+            border-radius: 4px;
+            vertical-align: middle;
         }
         input, select {
             width: 100%;
@@ -113,11 +124,11 @@
     <form id="main-form" novalidate>
       <div class="card">
         <div class="form-group">
-          <label for="response-deadline">返答期限</label>
+          <label for="response-deadline">返答期限<span class="required-badge">必須</span></label>
           <input type="datetime-local" id="response-deadline" required>
         </div>
         <div class="form-group">
-          <label for="handover-deadline">引き渡し期限</label>
+          <label for="handover-deadline">引き渡し期限<span class="required-badge">必須</span></label>
           <input type="datetime-local" id="handover-deadline" required>
         </div>
       </div>
@@ -156,7 +167,7 @@
         card.className = 'card item-card';
         card.innerHTML = `
             <div class="form-group">
-                <label>商品カテゴリ</label>
+                <label>商品カテゴリ<span class="required-badge">必須</span></label>
                 <select name="category" required>
                     <option value="">選択してください</option>
                     <option value="野菜">野菜</option>
@@ -166,7 +177,10 @@
                     <option value="生活雑貨">生活雑貨</option>
                 </select>
             </div>
-            <div class="form-group"> <label>商品名</label> <input type="text" name="name" required> </div>
+            <div class="form-group">
+                <label>商品名<span class="required-badge">必須</span></label>
+                <input type="text" name="name" required>
+            </div>
             <div class="form-group"> <label>有効期限 (任意)</label> <input type="date" name="expiry-date"> </div>
             <div class="form-group"> <label>個数 (任意)</label> <div class="input-group"> <input type="number" name="quantity" placeholder="例: 10"> <select name="unit" style="width: 100px;"> <option value="個" selected>個</option> <option value="本">本</option> <option value="袋">袋</option> <option value="パック">パック</option> <option value="箱">箱</option> <option value="缶">缶</option> <option value="瓶">瓶</option> <option value="束">束</option> <option value="巻">巻</option> </select> </div> </div>
             <div class="form-group"> <label>重量 (kg) (任意)</label> <input type="number" name="weight" step="0.1" min="0" placeholder="例: 0.5"> </div>
@@ -229,22 +243,32 @@
     });
 
     itemsContainer.addEventListener('click', e => {
-        if (e.target.classList.contains('remove-btn')) {
+        if (e.target.classList.contains('remove-btn') && itemsContainer.children.length > 1) {
             e.target.closest('.item-card').remove();
             updateRemoveButtons();
         }
     });
 
     submitButton.addEventListener('click', function() {
-        if (!document.getElementById('main-form').checkValidity()) {
-            alert('未入力の必須項目があります。内容をご確認ください。');
+        const responseDeadlineInput = document.getElementById('response-deadline');
+        if (!responseDeadlineInput.value) { alert('「返答期限」を入力してください。'); responseDeadlineInput.focus(); return; }
+        
+        const handoverDeadlineInput = document.getElementById('handover-deadline');
+        if (!handoverDeadlineInput.value) { alert('「引き渡し期限」を入力してください。'); handoverDeadlineInput.focus(); return; }
+
+        if (new Date(handoverDeadlineInput.value) < new Date(responseDeadlineInput.value)) {
+            alert('エラー: 引き渡し期限は、返答期限より後の日時に設定してください。');
+            handoverDeadlineInput.focus();
             return;
         }
-        const responseDeadline = new Date(document.getElementById('response-deadline').value);
-        const handoverDeadline = new Date(document.getElementById('handover-deadline').value);
-        if (handoverDeadline < responseDeadline) {
-            alert('エラー: 引き渡し期限は、返答期限より後の日時に設定してください。');
-            return;
+
+        const itemEntries = document.querySelectorAll('.item-card');
+        for (let i = 0; i < itemEntries.length; i++) {
+            const entry = itemEntries[i];
+            const categoryInput = entry.querySelector('[name="category"]');
+            if (!categoryInput.value) { alert(`商品${i + 1}の「商品カテゴリ」を選択してください。`); categoryInput.focus(); return; }
+            const nameInput = entry.querySelector('[name="name"]');
+            if (!nameInput.value) { alert(`商品${i + 1}の「商品名」を入力してください。`); nameInput.focus(); return; }
         }
 
         this.disabled = true; this.textContent = '処理中...';

@@ -262,6 +262,28 @@
             return;
         }
 
+            // 2. 日付の前後関係と過去日チェック
+            const now = new Date();
+            const responseDeadline = new Date(responseDeadlineInput.value);
+            const handoverDeadline = new Date(handoverDeadlineInput.value);
+
+            if (responseDeadline < now) {
+                alert('エラー: 返答期限は現在より後の日時に設定してください。');
+                responseDeadlineInput.focus();
+                return;
+            }
+            if (handoverDeadline < now) {
+                alert('エラー: 引き渡し期限は現在より後の日時に設定してください。');
+                handoverDeadlineInput.focus();
+                return;
+            }
+            if (handoverDeadline < responseDeadline) {
+                alert('エラー: 引き渡し期限は、返答期限より後の日時に設定してください。');
+                handoverDeadlineInput.focus();
+                return;
+            }
+            
+
         const itemEntries = document.querySelectorAll('.item-card');
         for (let i = 0; i < itemEntries.length; i++) {
             const entry = itemEntries[i];

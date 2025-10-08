@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>メッセージ送信</title>
+    <style>
+        :root {
+            --primary-color: #6c757d; /* テーマカラーを落ち着いたグレーに */
+            --light-gray: #f8f9fa;
+            --border-color: #dee2e6;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            background-color: var(--light-gray);
+            color: #333;
+        }
+        .header {
+            background: #fff;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .header img {
+            max-width: 180px;
+            margin-bottom: 10px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 22px;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        .container {
+            padding: 20px;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        .form-group {
+            margin-bottom: 25px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(108, 117, 125, 0.2);
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            background-color: var(--primary-color);
+            color: white;
+            transition: background-color 0.2s;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #message { text-align: center; margin-top: 20px; font-weight: bold; }
+    </style>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+
+  <div class="header">
+    <img src="http://whywaste-japan.sakura.ne.jp/whywaste-japan.jp/product_image/Donation/rogo.png" alt="Logo">
+    <h1>寄付提供者へのメッセージ</h1>
+  </div>
+
+  <div class="container">
+    <form id="messageForm">
+      <div class="card">
+        <div class="form-group">
+          <label for="pickupDate">寄付品の引き取り希望日</label>
+          <input type="date" id="pickupDate">
+        </div>
+        <div class="form-group">
+          <label for="messageText">メッセージ</label>
+          <textarea id="messageText" placeholder="引き取りの時間帯の相談や、感謝のメッセージなどをご自由に入力してください。"></textarea>
+        </div>
+      </div>
+      <button type="submit" id="submitButton" disabled>送信する</button>
+    </form>
+    <div id="message"></div>
+  </div>
+
+  <script>
+    const submitButton = document.getElementById('submitButton');
+    const pickupDateInput = document.getElementById('pickupDate');
+    const messageTextInput = document.getElementById('messageText');
+
+    // ★★★★★ 1. あなたのLIFF IDとGASのURLを設定してください ★★★★★
+    const liffId = "ここに新しく作成するメッセージ送信用LIFF IDを貼り付け";
+    const gasUrl = 'ここにあなたの「寄付品登録システム」のGASウェブアプリURLを貼り付け';
+    // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const donationId = urlParams.get('donationId');
+
+    // --- 送信ボタンの有効/無効を切り替える関数 ---
+    function validateForm() {
+      const isDateFilled = pickupDateInput.value.trim() !== '';
+      const isMessageFilled = messageTextInput.value.trim() !== '';
+      submitButton.disabled = !(isDateFilled || isMessageFilled); // どちらかが入力されていれば有効
+    }
+
+    pickupDateInput.addEventListener('input', validateForm);
+    messageTextInput.addEventListener('input', validateForm);
+
+    async function main() {
+      try {
+        await liff.init({ liffId: liffId });
+        if (!liff.isLoggedIn()) { liff.login(); return; }
+        // LIFF初期化が成功したら、入力可能にする
+        pickupDateInput.disabled = false;
+        messageTextInput.disabled = false;
+      } catch (error) {
+        document.getElementById('message').innerText = `エラー: ${error.message}`;
+        submitButton.textContent = '初期化エラー';
+      }
+    }
+    
+    window.onload = () => {
+        // 初期状態では入力欄を無効化
+        pickupDateInput.disabled = true;
+        messageTextInput.disabled = true;
+        main();
+    };
+
+    document.getElementById('messageForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      validateForm(); // 念のため再チェック
+      if(submitButton.disabled) {
+          alert('引き取り希望日かメッセージのどちらかを必ず入力してください。');
+          return;
+      }
+
+      submitButton.disabled = true;
+      submitButton.textContent = '送信中...';
+
+      const idToken = liff.getDecodedIDToken();
+      if (!idToken || !idToken.sub) {
+        alert("ユーザーIDが取得できませんでした。");
+        submitButton.disabled = false;
+        submitButton.textContent = '送信する';
+        return;
+      }
+
+      const formData = {
+        action: 'sendMessageToProvider',
+        donationId: donationId,
+        charitySub: idToken.sub,
+        pickupDate: pickupDateInput.value,
+        message: messageTextInput.value
+      };
+      
+      fetch(gasUrl, {
+        method: 'POST', body: JSON.stringify(formData), headers: { 'Content-Type': 'application/json' }, mode: 'no-cors'
+      }).then(() => {
+        alert("メッセージを送信しました。");
+        liff.closeWindow();
+      }).catch(error => {
+        alert(`送信エラー: ${error.message}`);
+        submitButton.disabled = false;
+        submitButton.textContent = '送信する';
+      });
+    });
+  </script>
+</body>
+</html>

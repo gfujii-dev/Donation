@@ -215,16 +215,27 @@
         recoveryCode: recoveryCode
       };
       
-      fetch(gasUrl, {
-        method: 'POST', body: JSON.stringify(formData), headers: { 'Content-Type': 'application/json' }, mode: 'no-cors'
-      }).then(() => {
-        alert("メッセージを送信しました。");
-        liff.closeWindow();
-      }).catch(error => {
+    fetch(gasUrl, {
+        method: 'POST',
+        body: JSON.stringify(formData),
+        headers: { 'Content-Type': 'application/json' }
+        // mode: 'no-cors' は削除する
+    })
+    .then(response => response.json()) // GASからの返事をJSONとして受け取る
+    .then(data => {
+        if (data.status === 'success') {
+            alert("メッセージを送信しました。");
+            liff.closeWindow();
+        } else {
+            // GAS側でエラーが起きた場合
+            throw new Error(data.message || 'サーバーでエラーが発生しました。');
+        }
+    })
+    .catch(error => {
         alert(`送信エラー: ${error.message}`);
         submitButton.disabled = false;
         submitButton.textContent = '送信する';
-      });
+    });
     });
   </script>
 </body>

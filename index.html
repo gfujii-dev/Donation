@@ -81,7 +81,7 @@
     }
     document.getElementById('zip2').addEventListener('keyup', fetchAddress);
 
-    async function main() {
+	async function main() {
       const prefSelect = document.getElementById('prefecture');
       prefectures.forEach(pref => {
         const option = document.createElement('option');
@@ -114,9 +114,28 @@
         globalUserId = idToken.sub;
         
         const action = (role === 'provider') ? 'getProviderFormData' : 'getCharityFormData';
-        const response = await fetch(`${gasUrl}?action=${action}&sub=${globalUserId}`);
-        const data = await response.json();
+ 
+ // ▼▼▼ GASへの問い合わせをJSONP方式に修正 ▼▼▼
+        const data = await new Promise((resolve, reject) => {
+          const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+          window[callbackName] = (data) => {
+            delete window[callbackName];
+            document.body.removeChild(script);
+            resolve(data);
+          };
+          const script = document.createElement('script');
+          script.src = `${gasUrl}?action=${action}&sub=${globalUserId}&callback=${callbackName}`;
+          script.onerror = reject;
+          document.body.appendChild(script);
+        });
+
+        if (data.error) throw new Error(data.error);
+        // ▲▲▲ ▲▲▲
+
         const userData = data.userData;
+
+ 
+ 
         
         if (role === 'provider') {
           const partnerList = data.allCharities;

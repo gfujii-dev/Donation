@@ -124,12 +124,12 @@
     <form id="main-form" novalidate>
       <div class="card">
         <div class="form-group">
-          <label for="response-deadline">返答期限<span class="required-badge">必須</span></label>
-          <input type="datetime-local" id="response-deadline" required>
+		  <label for="response-deadline">返答期限<span class="required-badge">必須</span></label>
+          <input type="text" id="response-deadline" required placeholder="例: 2025-10-20 18:00">
         </div>
         <div class="form-group">
-          <label for="handover-deadline">引き渡し期限<span class="required-badge">必須</span></label>
-          <input type="datetime-local" id="handover-deadline" required>
+		  <label for="handover-deadline">引き渡し期限<span class="required-badge">必須</span></label>
+          <input type="text" id="handover-deadline" required placeholder="例: 2025-10-22 19:00">
         </div>
       </div>
       
@@ -250,6 +250,22 @@
     });
 
     submitButton.addEventListener('click', function() {
+
+		const responseDeadlineValue = document.getElementById('response-deadline').value;
+        const handoverDeadlineValue = document.getElementById('handover-deadline').value;
+        
+		// 日付形式の簡易チェック (YYYY-MM-DD HH:MM)
+        const dateTimePattern = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/;
+        if (!dateTimePattern.test(responseDeadlineValue.replace('T', ' '))) {
+            alert('エラー: 返答期限を「YYYY-MM-DD HH:MM」の形式で入力してください。');
+            return;
+        }
+        if (!dateTimePattern.test(handoverDeadlineValue.replace('T', ' '))) {
+            alert('エラー: 引き渡し期限を「YYYY-MM-DD HH:MM」の形式で入力してください。');
+            return;
+        }
+        
+        
         const responseDeadlineInput = document.getElementById('response-deadline');
         if (!responseDeadlineInput.value) { alert('「返答期限」を入力してください。'); responseDeadlineInput.focus(); return; }
         

@@ -189,28 +189,18 @@
         formData.organizationName = document.getElementById('name').value;
       }
       
-fetch(gasUrl, {
+// ▼▼▼ このfetch部分を修正しました ▼▼▼
+      fetch(gasUrl, {
         method: 'POST',
         body: JSON.stringify(formData),
         headers: { 'Content-Type': 'application/json' },
         mode: 'no-cors' // 「送りっぱなし」モードに戻す
       })
-      .then(response => response.json()) // ▼▼▼ GASからの返事をJSONとして受け取る ▼▼▼
-      .then(data => {
-        if (data.status === 'success') {
-          // ▼▼▼ ステータスに応じて処理を分岐 ▼▼▼
-          if (data.registrationStatus === 'created') {
-            // 新規登録の場合はメニューを更新
-            document.getElementById('message').innerText = "登録が完了しました！メニューを更新します。";
-            liff.sendMessages([{ type: 'text', text: completionMessage }]).then(() => liff.closeWindow());
-          } else {
-            // 更新の場合はメッセージを表示して閉じるだけ
-            alert("情報を更新しました。");
-            liff.closeWindow();
-          }
-        } else {
-          throw new Error(data.message || 'サーバーでエラーが発生しました。');
-        }
+      .then(() => {
+        // GASからの返事は待たずに、送信を試みたら成功とみなす
+        document.getElementById('message').innerText = "登録が完了しました！メニューを更新します。";
+        // メニュー更新の合図をボットに送る
+        liff.sendMessages([{ type: 'text', text: completionMessage }]).then(() => liff.closeWindow());
       })
       .catch(error => {
         document.getElementById('message').innerText = `送信エラー: ${error.message}`;

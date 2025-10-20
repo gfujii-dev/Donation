@@ -6,7 +6,7 @@
     <title>寄付品の登録</title>
     <style>
         :root {
-            --primary-color: #007bff;
+            --primary-color: #007bff; /* テーマカラーを青に */
             --danger-color: #dc3545;
             --light-gray: #f8f9fa;
             --gray: #6c757d;
@@ -154,13 +154,7 @@
     const gasWebAppUrl = 'https://script.google.com/macros/s/AKfycbz8uu0AoILoiImRt0QYyy0cyn92HXMwH8CqpzEelRSYWUg9rSHhc2Fptf53FAci0hli/exec';
     // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
 
-    function setMinDateTime() {
-      const now = new Date();
-      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-      const minDateTime = now.toISOString().slice(0, 16);
-      document.getElementById('response-deadline').min = minDateTime;
-      document.getElementById('handover-deadline').min = minDateTime;
-    }
+    function setMinDateTime() { /* ... */ }
 
     function createItemEntry() {
         const card = document.createElement('div');
@@ -179,12 +173,18 @@
             </div>
             <div class="form-group">
                 <label>商品名<span class="required-badge">必須</span></label>
-                <input type="text" name="name" required>
+                <input type="text" name="name" required maxlength="25">
             </div>
             <div class="form-group"> <label>有効期限 (任意)</label> <input type="date" name="expiry-date"> </div>
-            <div class="form-group"> <label>個数 (任意)</label> <div class="input-group"> <input type="number" name="quantity" placeholder="例: 10"> <select name="unit" style="width: 100px;"> <option value="個" selected>個</option> <option value="本">本</option> <option value="袋">袋</option> <option value="パック">パック</option> <option value="箱">箱</option> <option value="缶">缶</option> <option value="瓶">瓶</option> <option value="束">束</option> <option value="巻">巻</option> </select> </div> </div>
-            <div class="form-group"> <label>重量 (kg) (任意)</label> <input type="number" name="weight" step="0.1" min="0" placeholder="例: 0.5"> </div>
-            <div class="form-group"> <label>画像 (任意)</label> <input type="file" name="photo" accept="image/*"> <div class="image-preview">プレビュー</div> </div>
+            <div class="form-group"> <label>個数 (任意)</label> <div class="input-group"> 
+                <input type="number" name="quantity" pattern="[0-9]*" inputmode="numeric" placeholder="例: 10"> 
+                <select name="unit" style="width: 100px;"> <option value="個" selected>個</option> <option value="本">本</option> <option value="袋">袋</option> <option value="パック">パック</option> <option value="箱">箱</option> <option value="缶">缶</option> <option value="瓶">瓶</option> <option value="束">束</option> <option value="巻">巻</option> </select> </div> </div>
+            <div class="form-group"> <label>重量 (kg) (任意)</label> 
+                <input type="number" name="weight" step="0.1" min="0" pattern="[0-9\\.]*" inputmode="decimal" placeholder="例: 0.5"> 
+            </div>
+            <div class="form-group"> <label>画像 (任意)</label> 
+                <input type="file" name="photo" accept="image/*" capture="environment"> 
+                <div class="image-preview">プレビュー</div> </div>
             <button type="button" class="remove-btn" style="display: none;">×</button>
         `;
         itemsContainer.appendChild(card);

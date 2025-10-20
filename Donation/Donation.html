@@ -124,12 +124,12 @@
     <form id="main-form" novalidate>
       <div class="card">
         <div class="form-group">
-          <label for="response-deadline">返答期限<span class="required-badge">必須</span></label>
-          <input type="date" id="response-deadline" required>
+		  <label for="response-deadline">返答期限<span class="required-badge">必須</span></label>
+          <input type="datetime-local" id="response-deadline" required>
         </div>
         <div class="form-group">
-          <label for="handover-deadline">引き渡し期限<span class="required-badge">必須</span></label>
-          <input type="date" id="handover-deadline" required>
+			<label for="handover-deadline">引き渡し期限<span class="required-badge">必須</span></label>
+          <input type="datetime-local" id="handover-deadline" required>
         </div>
       </div>
       
@@ -153,6 +153,17 @@
     const liffId = "2008200399-AVbwz9Dw";
     const gasWebAppUrl = 'https://script.google.com/macros/s/AKfycbz8uu0AoILoiImRt0QYyy0cyn92HXMwH8CqpzEelRSYWUg9rSHhc2Fptf53FAci0hli/exec';
     // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+    
+// ▼▼▼ 日付と時刻入力の最小値を現在時刻に設定する関数 ▼▼▼
+    function setMinDateTime() {
+      const now = new Date();
+      now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+      const minDateTime = now.toISOString().slice(0, 16);
+      
+      document.getElementById('response-deadline').min = minDateTime;
+      document.getElementById('handover-deadline').min = minDateTime;
+    }
+    
 
     // ▼▼▼ 日付入力の最小値を「今日」に設定する関数 ▼▼▼
     function setMinDate() {
@@ -254,12 +265,16 @@
         }
     });
 
+// ▼▼▼ 送信ボタンのクリック処理を、時刻も考慮するように修正 ▼▼▼
     submitButton.addEventListener('click', function() {
         const responseDeadlineInput = document.getElementById('response-deadline');
-        const handoverDeadlineInput = document.getElementById('handover-deadline');
+        if (!responseDeadlineInput.value) { alert('「返答期限」を入力してください。'); responseDeadlineInput.focus(); return; }
         
-        if (!responseDeadlineInput.value) { alert('「返答期限」を入力してください。'); return; }
-        if (!handoverDeadlineInput.value) { alert('「引き渡し期限」を入力してください。'); return; }
+        const handoverDeadlineInput = document.getElementById('handover-deadline');
+        if (!handoverDeadlineInput.value) { alert('「引き渡し期限」を入力してください。'); handoverDeadlineInput.focus(); return; }
+        
+        //if (!responseDeadlineInput.value) { alert('「返答期限」を入力してください。'); return; }
+        //if (!handoverDeadlineInput.value) { alert('「引き渡し期限」を入力してください。'); return; }
         
         // ▼▼▼ 日付の前後関係と過去日チェック ▼▼▼
         const today = new Date();

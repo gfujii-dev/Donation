@@ -190,10 +190,10 @@
       }
       
 fetch(gasUrl, {
-        method: 'POST', 
-        body: JSON.stringify(formData), 
-        headers: { 'Content-Type': 'application/json' }
-        // ▲▲▲ mode: 'no-cors' を削除 ▲▲▲
+        method: 'POST',
+        body: JSON.stringify(formData),
+        headers: { 'Content-Type': 'application/json' },
+        mode: 'no-cors' // 「送りっぱなし」モードに戻す
       })
       .then(response => response.json()) // ▼▼▼ GASからの返事をJSONとして受け取る ▼▼▼
       .then(data => {

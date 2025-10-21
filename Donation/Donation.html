@@ -124,11 +124,11 @@
     <form id="main-form" novalidate>
       <div class="card">
         <div class="form-group">
-		  <label for="response-deadline">返答期限<span class="required-badge">必須</span></label>
+          <label for="response-deadline">返答期限<span class="required-badge">必須</span></label>
           <input type="datetime-local" id="response-deadline" required>
         </div>
         <div class="form-group">
-			<label for="handover-deadline">引き渡し期限<span class="required-badge">必須</span></label>
+          <label for="handover-deadline">引き渡し期限<span class="required-badge">必須</span></label>
           <input type="datetime-local" id="handover-deadline" required>
         </div>
       </div>
@@ -154,7 +154,6 @@
     const gasWebAppUrl = 'https://script.google.com/macros/s/AKfycbz8uu0AoILoiImRt0QYyy0cyn92HXMwH8CqpzEelRSYWUg9rSHhc2Fptf53FAci0hli/exec';
     // ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
     
-// ▼▼▼ 日付と時刻入力の最小値を現在時刻に設定する関数 ▼▼▼
     function setMinDateTime() {
       const now = new Date();
       now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
@@ -162,14 +161,6 @@
       
       document.getElementById('response-deadline').min = minDateTime;
       document.getElementById('handover-deadline').min = minDateTime;
-    }
-    
-
-    // ▼▼▼ 日付入力の最小値を「今日」に設定する関数 ▼▼▼
-    function setMinDate() {
-      const today = new Date().toISOString().split("T")[0];
-      document.getElementById('response-deadline').min = today;
-      document.getElementById('handover-deadline').min = today;
     }
 
     function createItemEntry() {
@@ -227,6 +218,9 @@
                     preview.textContent = '';
                 };
                 reader.readAsDataURL(file);
+            } else {
+                preview.style.backgroundImage = 'none';
+                preview.textContent = 'プレビュー';
             }
         });
     }
@@ -245,6 +239,52 @@
             submitButton.textContent = 'エラーが発生しました';
         }
     }
+
+    // ----- ▼▼▼ 画像リサイズ用の補助関数 ▼▼▼ -----
+    function resizeImage(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const MAX_WIDTH = 800; // リサイズ後の最大幅
+                    const MAX_HEIGHT = 800; // リサイズ後の最大高さ
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                    } else {
+                        if (height > MAX_HEIGHT) {
+                            width *= MAX_HEIGHT / height;
+                            height = MAX_HEIGHT;
+                        }
+                    }
+                    
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // リサイズ後の画像をJPEG（品質0.8）のBase64として取得
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                    resolve({
+                        fileData: dataUrl,
+                        fileName: file.name.replace(/\.[^/.]+$/, "") + ".jpg" // 拡張子を.jpgに統一
+                    });
+                };
+                img.onerror = reject;
+                img.src = event.target.result;
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+    // ----- ▲▲▲ ▲▲▲ -----
 
     document.getElementById('add-item-btn').addEventListener('click', () => {
         const lastItem = itemsContainer.lastElementChild;
@@ -265,7 +305,7 @@
         }
     });
 
-// ▼▼▼ 送信ボタンのクリック処理を、時刻も考慮するように修正 ▼▼▼
+    // ▼▼▼ 送信ボタンのクリック処理を、リサイズ機能に対応させる ▼▼▼
     submitButton.addEventListener('click', function() {
         const responseDeadlineInput = document.getElementById('response-deadline');
         if (!responseDeadlineInput.value) { alert('「返答期限」を入力してください。'); responseDeadlineInput.focus(); return; }
@@ -312,21 +352,29 @@
                 const file = card.querySelector('[name="photo"]').files[0];
                 const itemData = {
                     category: card.querySelector('[name="category"]').value,
-                    name: card.querySelector('[name="name"]').value,
+                    name: card.querySelector('[nameName"]').value,
                     expiryDate: card.querySelector('[name="expiry-date"]').value,
                     quantity: card.querySelector('[name="quantity"]').value,
                     unit: card.querySelector('[name="unit"]').value,
                     weight: card.querySelector('[name="weight"]').value,
-                    responseDeadline: responseDeadlineInput.value, // 修正
-                    handoverDeadline: handoverDeadlineInput.value, // 修正
+                    responseDeadline: responseDeadlineInput.value,
+                    handoverDeadline: handoverDeadlineInput.value,
                     fileData: null, fileName: null
                 };
+
+                // ▼▼▼ 画像がある場合はリサイズ関数を呼び出す ▼▼▼
                 if (file) {
-                    const reader = new FileReader();
-                    reader.onload = e => { itemData.fileData = e.target.result; itemData.fileName = file.name; resolve(itemData); };
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                } else { resolve(itemData); }
+                    resizeImage(file)
+                        .then(resizedImage => {
+                            itemData.fileData = resizedImage.fileData;
+                            itemData.fileName = resizedImage.fileName;
+                            resolve(itemData);
+                        })
+                        .catch(reject);
+                } else {
+                    // 画像がない場合はそのまま
+                    resolve(itemData);
+                }
             }));
         });
         
@@ -345,12 +393,12 @@
                 alert('送信エラー: ' + err.message);
                 this.disabled = false; this.textContent = '全てまとめて送信する';
             });
-        }).catch(err => alert('データ作成エラー: ' + err.message));
+        }).catch(err => alert('データ作成エラー: 'A' + err.message));
     });
 
     window.onload = () => {
         initializePage();
-        setMinDate(); // 関数名を修正
+        setMinDateTime();
         createItemEntry();
     };
   </script>

@@ -240,41 +240,29 @@
         }
     }
 
-    // ----- ▼▼▼ 画像リサイズ用の補助関数 ▼▼▼ -----
     function resizeImage(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (event) => {
                 const img = new Image();
                 img.onload = () => {
-                    const MAX_WIDTH = 800; // リサイズ後の最大幅
-                    const MAX_HEIGHT = 800; // リサイズ後の最大高さ
+                    const MAX_WIDTH = 800;
+                    const MAX_HEIGHT = 800;
                     let width = img.width;
                     let height = img.height;
-
                     if (width > height) {
-                        if (width > MAX_WIDTH) {
-                            height *= MAX_WIDTH / width;
-                            width = MAX_WIDTH;
-                        }
+                        if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
                     } else {
-                        if (height > MAX_HEIGHT) {
-                            width *= MAX_HEIGHT / height;
-                            height = MAX_HEIGHT;
-                        }
+                        if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
                     }
-                    
                     const canvas = document.createElement('canvas');
-                    canvas.width = width;
-                    canvas.height = height;
+                    canvas.width = width; canvas.height = height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
-                    
-                    // リサイズ後の画像をJPEG（品質0.8）のBase64として取得
                     const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
                     resolve({
                         fileData: dataUrl,
-                        fileName: file.name.replace(/\.[^/.]+$/, "") + ".jpg" // 拡張子を.jpgに統一
+                        fileName: file.name.replace(/\.[^/.]+$/, "") + ".jpg"
                     });
                 };
                 img.onerror = reject;
@@ -284,7 +272,6 @@
             reader.readAsDataURL(file);
         });
     }
-    // ----- ▲▲▲ ▲▲▲ -----
 
     document.getElementById('add-item-btn').addEventListener('click', () => {
         const lastItem = itemsContainer.lastElementChild;
@@ -305,43 +292,25 @@
         }
     });
 
-    // ▼▼▼ 送信ボタンのクリック処理を、リサイズ機能に対応させる ▼▼▼
     submitButton.addEventListener('click', function() {
         const responseDeadlineInput = document.getElementById('response-deadline');
         if (!responseDeadlineInput.value) { alert('「返答期限」を入力してください。'); responseDeadlineInput.focus(); return; }
-        
         const handoverDeadlineInput = document.getElementById('handover-deadline');
         if (!handoverDeadlineInput.value) { alert('「引き渡し期限」を入力してください。'); handoverDeadlineInput.focus(); return; }
         
-        //if (!responseDeadlineInput.value) { alert('「返答期限」を入力してください。'); return; }
-        //if (!handoverDeadlineInput.value) { alert('「引き渡し期限」を入力してください。'); return; }
-        
-        // ▼▼▼ 日付の前後関係と過去日チェック ▼▼▼
-        const today = new Date();
-        today.setHours(0, 0, 0, 0); // 今日の日付の0時0分にする
+        const now = new Date();
         const responseDeadline = new Date(responseDeadlineInput.value);
         const handoverDeadline = new Date(handoverDeadlineInput.value);
+        if (responseDeadline < new Date(now.getTime() - 60000)) { alert('エラー: 返答期限は現在より後の日時に設定してください。'); return; }
+        if (handoverDeadline < new Date(now.getTime() - 60000)) { alert('エラー: 引き渡し期限は現在より後の日時に設定してください。'); return; }
+        if (handoverDeadline < responseDeadline) { alert('エラー: 引き渡し期限は、返答期限より後の日時に設定してください。'); return; }
 
-        if (responseDeadline < today) {
-            alert('エラー: 返答期限は本日以降の日付を選択してください。');
-            return;
-        }
-        if (handoverDeadline < today) {
-            alert('エラー: 引き渡し期限は本日以降の日付を選択してください。');
-            return;
-        }
-        if (handoverDeadline < responseDeadline) {
-            alert('エラー: 引き渡し期限は、返答期限より後の日時に設定してください。');
-            return;
-        }
-
-        const itemEntries = document.querySelectorAll('.item-card');
-        for (let i = 0; i < itemEntries.length; i++) {
-            const entry = itemEntries[i];
+        for (let i = 0; i < itemsContainer.children.length; i++) {
+            const entry = itemsContainer.children[i];
             const categoryInput = entry.querySelector('[name="category"]');
-            if (!categoryInput.value) { alert(`商品${i + 1}の「商品カテゴリ」を選択してください。`); return; }
+            if (!categoryInput.value) { alert(`商品${i + 1}の「商品カテゴリ」を選択してください。`); categoryInput.focus(); return; }
             const nameInput = entry.querySelector('[name="name"]');
-            if (!nameInput.value) { alert(`商品${i + 1}の「商品名」を入力してください。`); return; }
+            if (!nameInput.value) { alert(`商品${i + 1}の「商品名」を入力してください。`); nameInput.focus(); return; }
         }
 
         this.disabled = true; this.textContent = '処理中...';
@@ -352,7 +321,8 @@
                 const file = card.querySelector('[name="photo"]').files[0];
                 const itemData = {
                     category: card.querySelector('[name="category"]').value,
-                    name: card.querySelector('[nameName"]').value,
+                    // ▼▼▼ 1. バグ修正 ▼▼▼
+                    name: card.querySelector('[name="name"]').value, // [nameName"] から修正
                     expiryDate: card.querySelector('[name="expiry-date"]').value,
                     quantity: card.querySelector('[name="quantity"]').value,
                     unit: card.querySelector('[name="unit"]').value,
@@ -361,8 +331,6 @@
                     handoverDeadline: handoverDeadlineInput.value,
                     fileData: null, fileName: null
                 };
-
-                // ▼▼▼ 画像がある場合はリサイズ関数を呼び出す ▼▼▼
                 if (file) {
                     resizeImage(file)
                         .then(resizedImage => {
@@ -372,7 +340,6 @@
                         })
                         .catch(reject);
                 } else {
-                    // 画像がない場合はそのまま
                     resolve(itemData);
                 }
             }));
@@ -393,7 +360,12 @@
                 alert('送信エラー: ' + err.message);
                 this.disabled = false; this.textContent = '全てまとめて送信する';
             });
-        }).catch(err => alert('データ作成エラー: 'A' + err.message));
+        // ▼▼▼ 2. バグ修正 ▼▼▼
+        }).catch(err => {
+            alert('データ作成エラー: ' + err.message); // Stray 'A' を削除
+            submitButton.disabled = false;
+            submitButton.textContent = '全てまとめて送信する';
+        });
     });
 
     window.onload = () => {
